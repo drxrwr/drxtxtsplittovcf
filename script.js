@@ -9,7 +9,6 @@ function formatPhoneNumber(num) {
   return '+' + num;
 }
 
-// Preview isi file TXT
 document.getElementById("txtFileInput").addEventListener("change", function () {
   const file = this.files[0];
   if (!file) return;
@@ -27,8 +26,7 @@ document.getElementById("txtFileInput").addEventListener("change", function () {
   reader.readAsText(file);
 });
 
-// Tombol Split VCF
-document.getElementById("splitVCFButton").addEventListener("click", function () {
+document.getElementById("splitVCFButton").addEventListener("click", async function () {
   const rawNumbers = document.getElementById("numberTextArea").value.trim();
   const nameBase = document.getElementById("contactNameInput").value.trim();
   const contactsPerFile = parseInt(document.getElementById("contactsPerFile").value) || 100;
@@ -58,6 +56,8 @@ document.getElementById("splitVCFButton").addEventListener("click", function () 
   const outputDiv = document.getElementById("splitVcfFiles");
   outputDiv.innerHTML = "";
 
+  const zip = new JSZip();
+
   chunks.forEach((chunk, chunkIndex) => {
     const fileIndex = startNumber + chunkIndex;
     const currentFileName = `${fileName} ${fileIndex}${additionalFileName ? " " + additionalFileName : ""}`.trim();
@@ -84,6 +84,7 @@ document.getElementById("splitVCFButton").addEventListener("click", function () 
       vcfContent += `BEGIN:VCARD\nVERSION:3.0\nFN:${contactName}\nTEL:${number}\nEND:VCARD\n`;
     });
 
+    // Tambahkan file ke halaman
     const blob = new Blob([vcfContent], { type: "text/vcard" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
@@ -91,7 +92,23 @@ document.getElementById("splitVCFButton").addEventListener("click", function () 
     link.textContent = `Download ${link.download}`;
     outputDiv.appendChild(link);
     outputDiv.appendChild(document.createElement("br"));
+
+    // Tambahkan file ke ZIP
+    zip.file(`${currentFileName}.vcf`, vcfContent);
   });
 
-  console.log("Split VCF selesai.");
+  // Buat tombol download ZIP
+  const zipBlob = await zip.generateAsync({ type: "blob" });
+  const zipLink = document.createElement("a");
+
+  const lastFileIndex = startNumber + chunks.length - 1;
+  const zipFileName = `${fileName} ${startNumber}-${lastFileIndex}${additionalFileName ? " " + additionalFileName : ""}`.trim().replace(/\s+/g, "_");
+
+  zipLink.href = URL.createObjectURL(zipBlob);
+  zipLink.download = `${zipFileName}.zip`;
+  zipLink.textContent = `📦 Download Semua (${zipLink.download})`;
+  zipLink.style.fontWeight = "bold";
+  zipLink.style.display = "block";
+  zipLink.style.marginTop = "20px";
+  outputDiv.appendChild(zipLink);
 });
